@@ -1,0 +1,129 @@
+﻿@page "/edititem"
+@page "/edititem/{id:int}"
+
+@inject NavigationManager NavigationManager 
+@inject CollectionsClient CollectionsClient
+@inject ItemTypesClient TypesClient
+@inject CountriesClient CountriesClient
+
+@rendermode InteractiveServer
+
+<PageTitle>@title</PageTitle>
+<h3>@title</h3>
+
+
+@if (itemTypes is null || countries is null || item is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm Model="@item" FormName="editItem" OnValidSubmit="HandleSubmitAsync" Enhance>
+                <DataAnnotationsValidator /> 
+                <ValidationSummary />
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <InputText class="form-control" id="name" @bind-Value="item.Name" />
+                    <ValidationMessage For="() => item.Name"/>
+                </div>
+                <div class="mb-3">
+                    <label for="itemType" class="form-label">Item Type:</label>
+                    <InputSelect class="form-select" id="itemType" @bind-Value="item.ItemTypeId">
+                        <option value="">Select a type</option>
+                        @foreach (var type in itemTypes)
+                        {
+                            <option value="@type.Id">@type.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => item.ItemTypeId" />
+                </div>
+                <div class="mb-3">
+                    <label for="country" class="form-label">Country:</label>
+                    <InputSelect class="form-select" id="country" @bind-Value="item.CountryId" >
+                        <option value="">Select a country</option>
+                        @foreach (var country in countries)
+                        {
+                            <option value="@country.Id">@country.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => item.CountryId" />
+                </div>
+                <div class="mb-3">
+                    <label for="productionYear" class="form-label">Production Year:</label>
+                    <InputNumber class="form-control" id="productionYear" @bind-Value="item.ProductionYear" />
+                    <ValidationMessage For="() => item.ProductionYear" />
+                </div>
+                <div class="mb-3">
+                    <label for="numberOfCopies" class="form-label">Number of Copies:</label>
+                    <InputNumber class="form-control" id="numberOfCopies" @bind-Value="item.NumberOfCopies" />
+                    <ValidationMessage For="() => item.NumberOfCopies" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a role="button" class="btn btn-secondary" href="/">Cancel</a>
+            </EditForm>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private CollectibleItemDetail? item { get; set; }
+
+    private ItemType[]? itemTypes;
+    private Country[]? countries;
+
+    private string title = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (item is not null)
+        {
+            return;
+        }
+
+        if (Id is not null)
+        {
+            item = await CollectionsClient.GetItemAsync(Id.Value);
+            title = $"Edit {item.Name}";
+        }
+        else
+        {
+            item = new()
+            {
+                Name = string.Empty,               
+            };
+            title = "New Item";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        itemTypes = await TypesClient.GetItemTypesAsync();
+        countries = await CountriesClient.GetCountriesAsync();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (Id is null)
+        {
+            await CollectionsClient.AddItemAsync(item);
+        }
+        else
+        {
+            item.Id = Id.Value;
+            item.LastEdit = DateOnly.FromDateTime(DateTime.UtcNow);
+            await CollectionsClient.UpdateItemAsync(item);
+        }
+        NavigationManager.NavigateTo("/");
+
+        
+    }
+}

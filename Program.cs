@@ -1,0 +1,38 @@
+using CollectorsHelper.Frontend.Clients;
+using CollectorsHelper.Frontend.Components;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+var collectorsHelperApiUrl = builder.Configuration["CollectorsHelperApiUrl"] ??
+    throw new Exception("API url is not set");
+builder.Services.AddHttpClient<CollectionsClient>(
+    client => client.BaseAddress = new Uri(collectorsHelperApiUrl));
+
+builder.Services.AddHttpClient<ItemTypesClient>(
+    client => client.BaseAddress = new Uri(collectorsHelperApiUrl));
+
+builder.Services.AddHttpClient<CountriesClient>(
+    client => client.BaseAddress = new Uri(collectorsHelperApiUrl));
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+
+app.UseStaticFiles();
+app.UseAntiforgery();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+app.Run();
